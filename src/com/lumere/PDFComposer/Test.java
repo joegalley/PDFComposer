@@ -41,6 +41,7 @@ public class Test {
 		composer.drawTable(table_data, "Test Title", new String[] { "Column 1", "Column 2", "Column 3",
 				"Column 4" });
 		
+		composer.drawImage("img.jpg", 20, 200);
 		composer.saveDocument("testing.pdf");
 
 

@@ -3,6 +3,8 @@ package com.lumere.PDFComposer;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +15,8 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.edit.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.xobject.PDJpeg;
+import org.apache.pdfbox.pdmodel.graphics.xobject.PDXObjectImage;
 
 public class PDFComposer {
 	private PDFStreamTracker tracker;
@@ -233,13 +237,14 @@ public class PDFComposer {
 	}
 
 	public void saveDocument(ByteArrayOutputStream baos) {
+		this.closeStream();
 		try {
 			tracker.doc.save(baos);
-		} catch (COSVisitorException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
+			tracker.doc.close();
+		} catch (COSVisitorException | IOException e) {
 			e.printStackTrace();
 		}
+
 	}
 
 	public void saveDocument(String filename) {
@@ -541,4 +546,22 @@ public class PDFComposer {
 		return width;
 	}
 
+	public void drawImage(String path_to_image, float width, float height) {
+		try {
+			PDXObjectImage img = new PDJpeg(tracker.doc, new FileInputStream(path_to_image));
+			// tracker.content_stream.drawImage(img, tracker.xPos, tracker.yPos,
+			// width, height);
+			tracker.content_stream.drawXObject(img, tracker.xPos, tracker.yPos, width, height);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void moveRight(float pixels) {
+		try {
+			tracker.content_stream.moveTextPositionByAmount(tracker.xPos + pixels, tracker.yPos);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 }
