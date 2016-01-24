@@ -20,6 +20,9 @@ import org.apache.pdfbox.pdmodel.graphics.xobject.PDXObjectImage;
 
 public class PDFComposer {
 	private PDFStreamTracker tracker;
+	private PDDocument doc;
+	private PDPage page;
+	private PDPageContentStream cos;
 
 	private float hMargin;
 	private float vMargin;
@@ -77,6 +80,7 @@ public class PDFComposer {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+
 			tracker = new PDFStreamTracker(doc, page, cos, hMargin, page.findMediaBox().getHeight()
 					- vMargin);
 		}
@@ -172,8 +176,11 @@ public class PDFComposer {
 	}
 
 	private PDFComposer(Builder builder) {
-
 		tracker = builder.tracker;
+		doc = builder.doc;
+		page = builder.page;
+		cos = builder.cos;
+
 		hMargin = builder.hMargin;
 		vMargin = builder.vMargin;
 		line_ht = builder.line_ht;
@@ -194,7 +201,46 @@ public class PDFComposer {
 
 	}
 
+	public float getXPos() {
+		return tracker.xPos;
+	}
+
+	public float getYPos() {
+		return tracker.yPos;
+	}
+
+	private boolean checkIfNewPageNeeded(float height_needed) {
+		return true;
+		/*-
+		if ((tracker.yPos + height_needed) < tracker.page.findMediaBox().getHeight()) {
+			return true;
+		}
+		else {
+			return false;
+		}
+		 */
+	}
+
+	private void addPage() {
+		try {
+			tracker.content_stream.close();
+			PDPage new_page = new PDPage();
+			doc.addPage(new_page);
+			cos = new PDPageContentStream(doc, new_page);
+			System.out.println(new_page.findMediaBox().getHeight());
+			System.out.println(hMargin);
+			tracker = new PDFStreamTracker(doc, new_page, cos, hMargin, new_page.findMediaBox().getHeight()
+					- vMargin);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 	public PDFStreamTracker drawString(String str) {
+		if (checkIfNewPageNeeded(10)) {
+			addPage();
+		}
 		try {
 			tracker.content_stream.beginText();
 			tracker.content_stream.setFont(this.FONT_BOLD, 12);
@@ -546,22 +592,51 @@ public class PDFComposer {
 		return width;
 	}
 
-	public void drawImage(String path_to_image, float width, float height) {
+	/**
+	 * Draws an image with the top left corner at x, y.
+	 * <p>
+	 * Note that this differs from PDFBox's drawImage() method, where the
+	 * image's bottom left corner would be at x, y.
+	 * <p>
+	 * 
+	 * @param path_to_image
+	 *            Path to the image.
+	 * @param x
+	 *            x-coordinate of the image's top left corner.
+	 * @param y
+	 *            y-coordinate of the image's top left corner.
+	 * @param width
+	 *            Width of the image (image will be scaled to fit if this is not
+	 *            the same as the image's width).
+	 * @param height
+	 *            Height of the image (image will be scaled to fit if this is
+	 *            not the same as the image's height).
+	 * @return void
+	 */
+	public void drawImage(String path_to_image, float x, float y, float width, float height) {
 		try {
 			PDXObjectImage img = new PDJpeg(tracker.doc, new FileInputStream(path_to_image));
 			// tracker.content_stream.drawImage(img, tracker.xPos, tracker.yPos,
 			// width, height);
-			tracker.content_stream.drawXObject(img, tracker.xPos, tracker.yPos, width, height);
+			tracker.content_stream.drawXObject(img, tracker.xPos, tracker.yPos - height, width, height);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void moveRight(float pixels) {
-		try {
-			tracker.content_stream.moveTextPositionByAmount(tracker.xPos + pixels, tracker.yPos);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		tracker.xPos += pixels;
+	}
+
+	public void moveLeft(float pixels) {
+		tracker.xPos -= pixels;
+	}
+
+	public void moveUp(float pixels) {
+		tracker.yPos += pixels;
+	}
+
+	public void moveDown(float pixels) {
+		tracker.yPos -= pixels;
 	}
 }
